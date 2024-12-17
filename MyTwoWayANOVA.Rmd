@@ -1,0 +1,177 @@
+---
+title: "My Two-way ANOVA"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r, warning=FALSE, message=FALSE}
+library(mosaic)
+library(DT)
+library(pander)
+library(car)
+library(tidyverse)
+
+mentors <- read.csv("C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/mentors.csv", header=TRUE) 
+
+
+```
+
+<!--If you want to give your critiquers some ideas about what you have questions on and would like help with, place those details here.-->
+
+<!--End your comments to your critiquers before this line.-->
+
+------------------------------------------------------------------------
+
+## Background {.tabset .tabset-fade}
+
+### Study Details
+
+::: {style="color:#a8a8a8;"}
+![Gandalf](C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/Gandalf-2.webp)
+
+***VERSUS***
+
+![Yoda](C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/1001524-yoda-wallpaper-1920x1080-tablet.jpg)
+
+:::
+
+::: {style="padding-left:30px; padding-right:30px;"}
+"With great power comes great responsibility" said Uncle Ben to the young Peter Parker. 
+As a super hero one of the greatest responsibilities is to develop and increment the power given upon us.
+Choosing the right mentor to help you fulfill that responsibility is key in that process. Being trained by 
+a mentor makes you reach your greatest potential and power. 
+Power levels of superheroes are measured in this dataset show how two legendary mentors-Gandalf and Yola- shape the abilities of their trainees across two distinct training styles: Strengh and Agility.
+
+Why Two-Way ANOVA?
+
+As stated in the textbook [Statistics Notebook by PhD Brother Saunders](MakingInference.html)
+: With a two-way ANOVA there are three sets of hypotheses. Writing out the hypotheses can be very involved depending on whether you use the official “effects model” notation (very mathematically correct) or a simplified “means model” notation (which isn’t very mathematically correct, but gets the idea across in an acceptable way).
+
+Based on that we want to explore the relationship between mentorship, training style,, and superhero performance. The Two-Way ANOVA allows us to examine how trainig style and mentor (the independent variables), influece the dependent variable, which is the power levels of superheros.
+
+
+:::
+
+### The Data (Wide)
+
+Here is the raw data table:
+
+```{r, out.width=300}
+pander(mentors, split.tables = Inf)
+```
+
+
+## 
+
+------------------------------------------------------------------------
+
+## Analysis {.tabset .tabset-fade}
+
+### Hypotheses
+
+<!-- State the hypotheses for this analysis in this section. -->
+We establish three sets of hypotheses:
+- The first set test the main effect of the training style, asking wheter the differences in power levels are significant across Strenth and Agility training.
+
+1. **Main Effect of Training Style**:
+   $$
+   H_0: \mu_\text{Strength} = \mu_\text{Agility}
+   $$
+   $$
+   H_a: \mu_\text{Strength} \neq \mu_\text{Agility}
+   $$
+
+- The second set tests the main effect of the mentor in the power levels. Is Gandalf's way of training better compare to Yoda's?
+2. **Main Effect of Mentor**:
+   $$
+   H_0: \mu_\text{Gandalf} = \mu_\text{Yoda}
+   $$
+   
+   $$
+   H_a: \mu_\text{Gandalf} \neq \mu_\text{Yoda}
+   $$
+
+- The third and last investigates the interaction between the two factors, exploring if the impact of mentorship on power levels varies depending on the training style.
+
+3. **Interaction Effect between Training Style and Mentor**:
+   $$
+   H_0: \text{There is no interaction between Training Style and Mentor}
+   $$
+   $$
+   H_a: \text{There is a significant interaction between Training Style and Mentor}
+   $$
+
+
+To test the hypothesis and the alternative we set α at 0.05, meaning that if the p-value is less than 0.05 we reject the null hypothesis, if it is greater than or equal to 0.05 we fail to reject the null hypothesis.
+
+
+### Two-way ANOVA
+
+<!-- Show the two-way ANOVA summary output in this section. -->
+
+
+
+```{r}
+training_aov <- aov(Power_Level ~ Training_Type, data=mentors)
+summary(training_aov) %>% 
+  pander()
+```
+From this tests We can conclude that the Strength and Agility training types do not differ significantly in terms of their effects on power levels. This means that a superhero can choose either training type and expect to achieve similar results in their power level.
+
+```{r}
+mentor_aov <- aov(Power_Level ~ Mentor, data=mentors)
+summary(mentor_aov) %>% 
+  pander()
+```
+We can conclude that the choice of mentor significantly influences the increase in power levels. The results indicate that different mentors lead to different outcomes in a superhero's power level, highlighting the importance of selecting the right mentor for optimal training results.
+
+```{r}
+interaction_aov <- aov(Power_Level ~ Training_Type + Mentor + Training_Type:Mentor, data=mentors)
+summary(interaction_aov) %>% 
+  pander()
+```
+The analysis reveals that the type of training (Strength vs. Agility) does not significantly impact power levels, as indicated by a p-value of 0.656. In contrast, the choice of mentor has a significant effect, with a p-value of 0.000167, suggesting that a mentor can substantially influence a superhero's increase in power levels. Thus, while training type may be flexible, selecting an effective mentor is critical for optimal training outcomes.
+
+### Graphics & Numerical Summaries
+
+<!-- Show the three graphics of the two-way ANOVA in this section and provide a supporting table of numerical summaries for each graphic. -->
+```{r}
+xyplot(Power_Level ~ as.factor(Training_Type), data=mentors,type=c("p","a"), main="Strength or Agility?", col="darkblue", xlab="Type of Training", ylab="Power Level")
+summary_mentor <- aggregate(Power_Level ~ Mentor, data = mentors, 
+                             FUN = function(x) c(Mean = mean(x), SD = sd(x)))
+
+summary_mentor
+
+xyplot(Power_Level ~ as.factor(Mentor), data = mentors,type=c("p","a"), main= "Gandalf vs Yoda", col = "darkblue", xlab = "Mentor", ylab = "Power Level")
+summary_mentor <- aggregate(Power_Level ~ Mentor, data = mentors, 
+                             FUN = function(x) c(Mean = mean(x), SD = sd(x)))
+
+summary_mentor
+
+xyplot(Power_Level ~ as.factor(Training_Type):as.factor(Mentor), data = mentors, type = c("p", "a"), main = "Interaction Between Training and Mentor", xlab = "Interaction Trainig-Mentor", ylab = "Power Level", col = "darkblue")
+summary_interaction <- aggregate(Power_Level ~ Training_Type + Mentor, data = mentors, 
+                                  FUN = function(x) c(Mean = mean(x), SD = sd(x)))
+
+summary_interaction
+```
+### Conclusions
+
+<!-- Interpret the results of the study. Use specific details in your writing like mentioning the actual amount of the fine and the relative cost to babysitting. Mention the average number of late children before the fine, during the fine, and after the fine was removed. -->
+The analysis shows clear differences in power levels based on the mentor. Superheroes trained by Yoda had a higher average power level of 93.00 (SD = 2.37) compared to those trained by Gandalf, who had an average of 81.83 (SD = 3.54).
+
+Looking at the training types, superheroes trained in Agility by Yoda reached the highest power level of 95.00 (SD = 1.00). In comparison, those trained by Gandalf had an average power level of 84.67 (SD = 2.52) for Strength and 79.00 (SD = 1.00) for Agility.
+
+These results suggest that both the choice of mentor and the type of training are important for increasing power levels. Yoda's training appears to be particularly effective
+
+### Diagnostic Plots
+
+<!-- Provide some discussion about how appropriate the ANOVA analysis was for this data. Include the residuals vs. fitted values plot and the Q-Q Plot of residuals. -->
+The normality of the error terms appears to be satisfied (Normal Q-Q Plot on the right) as well as the constant variance assumption (Residuals vs Fitted values point on the left). This is because the spread of the four sets of points seems to similar with only one exception at Fitted Value 85.The results of the test can be considered valid
+```{r, fig.height=3}
+par(mfrow=c(1,2))
+plot(interaction_aov, which=1:2)
+```
+
+

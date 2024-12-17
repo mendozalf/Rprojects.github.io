@@ -1,0 +1,206 @@
+---
+title: "Weather"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+## Background
+
+Bogota and Medellin are two of Colombia's largest and most prominent cities, each with its own distinctive cultural and geographical features. Having lived in both cities, I've often wondered which city enjoys a more favorable temperature throughout the year and what factors influence these temperature differences.
+
+
+![Cities](C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/BogvsMed.jpg)
+
+```{r, warning=FALSE, message=FALSE, ev}
+library(GSODR) #run: install.packages("GSODR")
+library(mosaic)
+library(car)
+library(DT)
+library(pander)
+library(readr)
+library(dplyr)
+library(tidyr)
+
+```
+
+```{r, eval=FALSE}
+#Run this in your console to see the Country Names you can pick from:
+View(isd_history)
+#Search "United States" in the search bar of the top-right corner of the data Viewer that pops up.
+#Or search for any other country you are interested in.
+#Goal, select the STNID (station ID) for two different weather stations. 
+#For example, Rexburg is STNID == "726818-94194"
+#Once you have two STNID values selected, go to the next R-chunk.
+```
+
+```{r}
+#rexburg <- get_GSOD(years = 2023, station = "726818-94194")
+#Run: View(rexburg)
+#To see what columns mean, go here: https://cran.r-project.org/web/packages/GSODR/vignettes/GSODR.html#appendices
+
+#Then run a similar code to get your station information for your weather stations.
+#(If you want to use rexburg, then just use one of the following codes)
+medellin <- get_GSOD(years = 2023, station = "801120-99999")
+bogota <- get_GSOD(years = 2023, station = "802220-99999")
+
+#Finally, join your two datasets together into one dataset:
+weather <- rbind(bogota, medellin)
+
+View(weather)
+
+```
+
+
+## The Data
+
+Here is the data of our analysis, we can see variables such as temperature, precipitation, humidity, and elevation.
+
+```{r, warning=FALSE, message=FALSE}
+
+weather <- weather %>%
+  mutate(NAME = case_when(
+    NAME == "ELDORADO INTL" ~ "Bogota",
+    NAME == "JOSE MARIA CORDOVA" ~ "Medellin",
+    TRUE ~ NAME 
+  ))
+
+weather_summary <- weather %>%
+  group_by(NAME, MONTH) %>%
+  summarise(
+    City = NAME,
+    Month = MONTH,
+    Temperature = round(mean(TEMP, na.rm = TRUE),2),
+    Precipitation = round(mean(PRCP, na.rm = TRUE),2),
+    Humidity = round(mean(RH, na.rm = TRUE),2),
+    Elevation = round(mean(ELEVATION, na.rm = TRUE),2),
+    .groups = 'drop'
+  ) %>% 
+  select(City, Month, Temperature, Precipitation, Humidity, Elevation)
+
+datatable(weather_summary, options = list(pageLength = 3), rownames = FALSE)
+
+
+ 
+```
+
+## Temperature Comparision
+
+```{r}
+weather_summary$Month <- as.factor(weather_summary$Month)
+
+# Summarize temperature by City and Month if necessary
+monthly_temperature <- weather_summary %>%
+  group_by(City, Month) %>%
+  summarise(Average_Temperature = mean(Temperature, na.rm = TRUE), .groups = 'drop')
+
+ggplot(monthly_temperature, aes(x = Month, y = Average_Temperature, fill = City)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.6) + 
+  labs(title = "Average Monthly Temperature by City",
+       x = "Month", y = "Average Temperature (°C)") +
+  theme_minimal() +
+  scale_x_discrete(breaks = 1:12, labels = month.name) +  # Display month names instead of numbers
+  scale_fill_manual(values = c("Bogota" = "skyblue", "Medellin" = "skyblue4")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+From the graph, we can conclude that Medellin experiences higher temperatures throughout the year, starting at around 15°C and gradually increasing.
+
+## Question and Hypothesis
+
+Now our question is why factors influences temperature in both cities?
+How do humidity, elevation, and the interaction between humidity and elevation influence the temperature in Bogota and Medellin?
+
+**Null Hypothesis (H₀)**: Humidity, elevation, and the interaction between humidity and elevation have no significant effect on temperature in Bogota and Medellin.
+
+**Alternative Hypothesis (H₁)**: Humidity, elevation, and the interaction between humidity and elevation significantly affect the temperature in Bogota and Medellin.
+
+
+## The Model
+The Model
+We use a multiple linear regression model to obtain two separate regression lines, one for each city.
+Specifically, the model is:
+
+
+$$
+Temperature = B_0 + B_1\ . \ Humidity \ + B_2 \ . \ Elevation \ + B_3 \ . \ Humidity : Elevation \ . \ + e 
+$$
+
+Confidence level:
+
+$$
+a =0.05
+$$
+
+## Test
+
+```{r}
+weather_summary$City <- factor(weather_summary$City)
+
+model <- lm(Temperature ~ Humidity + Elevation + Humidity:Elevation, data = weather_summary)
+
+# View the summary of the model to see the results
+summary(model)
+```
+
+This model helps us understand how humidity and elevation affect the temperature in Bogota and Medellin. When both humidity and elevation are at zero, the base temperature would be about **91.59°C**. For every **1%** increase in humidity, the temperature decreases by **0.76°C (p < 0.001)**, meaning higher humidity cools things down. Elevation also plays a role— for every meter of elevation increase, the temperature drops by **0.03°C (p < 0.001)**. Additionally, the model shows that the effect of humidity on temperature is slightly influenced by elevation, with both high humidity and high elevation leading to a small increase in temperature **(p < 0.001)**. The model explains about **92%** of the temperature changes, and its predictions are very close to the actual temperatures, with an average error of just **0.42°C**. Overall, the model demonstrates that both humidity and elevation significantly impact temperature, making it a reliable tool for understanding these factors.
+
+## Diagnostic Plots
+
+```{r}
+
+# Diagnostic plots to check assumptions
+par(mfrow=c(1,2))
+plot(model, which=1)
+qqPlot(model$residuals)
+```
+The diagnostic plots are used to check if the assumptions of the linear regression model are met. The Residuals vs Fitted Plot helps us see if there are any patterns in the residuals, which should be randomly scattered around zero. Since there are no clear patterns, it shows that the model fit is good. The Q-Q Plot compares the residuals to a normal distribution, and because the points follow a straight line, it suggests that the residuals are normally distributed. Both plots look good, meaning the assumptions of linearity, constant variance, and normality are met, and the model is well-fitted.
+
+
+## Monthly Precipitation Pattern
+
+```{r}
+model <- lm(Temperature ~ Humidity + Elevation + Humidity:Elevation, data = weather_summary)
+
+# Add fitted values for each city
+weather_summary$fitted <- predict(model)
+
+ggplot(weather_summary, aes(x = Month, y = Temperature, color = City)) +
+  geom_point(size = 3) +  # Add points for actual Temperature
+  geom_line(aes(y = fitted), size = 1, linetype = "dashed") +  # Add dashed line for fitted values
+  labs(title = "Temperature by Month: Bogota vs Medellin", 
+       x = "Month", 
+       y = "Temperature (°C)") +
+  theme_minimal() +
+  scale_color_manual(values = c("Bogota" = "skyblue", "Medellin" = "skyblue4")) +  # Customize colors
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+
+## Conclusion
+
+In conclusion, this study shows that both humidity and elevation play important roles in determining the temperature in Bogotá and Medellín. The model indicates that higher humidity slightly cools temperatures, while higher elevation also leads to cooler temperatures. The interaction between humidity and elevation suggests that their combined effect on temperature is small but noticeable. With an accuracy of about 92% in explaining temperature changes and a small prediction error of 0.42°C, the model provides a reliable understanding of how these factors influence temperature. The diagnostic plots confirm that the model fits the data well, with no major violations of its assumptions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\
+
+

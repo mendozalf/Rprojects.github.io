@@ -1,0 +1,120 @@
+---
+title: "Chi Squared Test"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+```{r, message=FALSE, warning=FALSE}
+library(mosaic)
+library(ResourceSelection)
+library(car)
+library(tidyverse)
+library(mosaic)
+library(DT)
+library(pander)
+library(car)
+library(plotly)
+library(tidyverse)
+library(pander)
+library(mosaic)
+library(haven)
+gss2021 <- read_sas("C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/Statistics-Notebook-master/Data/gss2021.sas7bdat", 
+NULL)
+View(gss2021)
+
+```
+
+
+## Background
+
+This study investigates whether income is independent of marital status. Specifically, we want to explore if different marital statuses (married, divorced, never married) are associated with variations in income levels. In other words, is there a statistically significant relationship between the amount of income a person earns and their marital status, or are these variables independent of each other?
+
+
+## Table
+
+The table shows the number of individuals in different marital status categories (Married, Divorced, and Never Married) for three income ranges:
+
+* $15,000 to $19,999
+* $20,000 to $24,999
+* $25,000 or more
+
+```{r, message=FALSE, warning=FALSE}
+mygss2021 <- gss2021 %>%
+  select(INCOME, MARITAL)%>%
+    filter(INCOME %in% c(1:12),
+          MARITAL %in% c(1:5))
+
+
+mytable <- table(gss2021$INCOME, gss2021$MARITAL)
+
+rownames(mytable) <- c("Under $1,000", "$1,000 to $2,999", "$3,000 to $3,999",  "$4,000 to $4,999", "$5,000 to $5,999", "$6,000 to $6,999", "$7,000 to $7,999", "$8,000 to $9,999", "$10,000 to $14,999", "$15,000 to $19,999", "$20,000 to $24,999","$25,000 or more", "Blah blah")
+
+
+colnames(mytable) <-c("Married", "Widowed", "Divorced", "Separated", "Never Married")
+
+
+filtered_table <- mytable[c("$15,000 to $19,999", "$20,000 to $24,999", "$25,000 or more"), c("Married", "Divorced", "Never Married")]
+
+# View the filtered table
+pander(filtered_table)
+```
+We can see that in fact, there might the two variable (income and marital status) could be correlated. For example, we can see the married people tend to have higher income. To confirm this, we will use a Chi squared test.
+
+## Analysis
+
+$$
+H_0: \ Income \ and \ marital \ status \ are \ independent \ of \ each \ other\\ 
+$$
+This means that the income level does not affect or is not related to a person's marital status.
+
+$$
+H_1: \ Income \ and \ marital \ status \ are \ associated \ ( \ not \ independent \ )\\ 
+$$
+This means that there is a relationship between income level and marital status.
+
+$$
+a =0.05
+$$
+
+We will be using a level of significance α = 0.05. This means that we will reject the null hypothesis if the probability of observing the data (or something more extreme) assuming the null hypothesis is true is less than 5%.
+
+
+
+
+## Chi Squared Test
+
+```{r, message=FALSE, warning=FALSE}
+mytest <- chisq.test(filtered_table)
+
+mytest %>% 
+  pander()
+```
+
+The Chi-Square test results show a test statistic of 109.2 with 4 degrees of freedom and a very small p-value (1.099e-22). Since the p-value is much less than the significance level of 0.05, we reject the null hypothesis and conclude that income and marital status are associated (not independent).
+
+## Barplot
+
+```{r, message=FALSE, warning=FALSE}
+barplot(filtered_table, beside = TRUE, col=c("skyblue2","skyblue4","skyblue"), legend.text = TRUE, args.legend = list(x = "topright", bty = "n", title = "Income Level"), xlab = "Marital Status", main = "Being Married Associated with Higher Income")
+```
+The bar plot supports the findings of our Chi-Square test, visually highlighting that married individuals tend to have higher income levels compared to those who are divorced or have never been married.
+
+## Test Expected
+
+```{r, message=FALSE, warning=FALSE}
+pander(mytest$expected)
+```
+This table shows the expected number of people in each marital status group (Married, Divorced, Never Married) for three income ranges: $15,000 to $19,999, $20,000 to $24,999, and $25,000 or more. It tells us how many people we would expect in each group if marital status and income were unrelated. For example, in the $25,000 or more income range, we expect more married people (1262) compared to divorced (406.8) or never married people (542.4).
+
+## Test Residuals
+
+```{r, message=FALSE, warning=FALSE}
+pander(mytest$residuals)
+```
+The residuals table shows the differences between the observed and expected counts for each group. A negative residual indicates fewer people in a category than expected, while a positive residual indicates more people than expected. For example, in the $15,000 to $19,999 income group, there are 5.291 fewer married individuals than expected, and 3.555 more divorced individuals than expected. In the $25,000 or more group, there are 2.058 more married individuals than expected. These residuals highlight where the observed numbers deviate from what we would expect if marital status and income were independent.
+
+## Conclusion
+
+In conclusion, the results of the Chi-Square test show that marital status and income are related. The differences between the observed and expected numbers suggest that people in higher income groups are more likely to be married. Therefore, we reject the idea that income and marital status are independent, and we conclude that income does influence marital status.
+

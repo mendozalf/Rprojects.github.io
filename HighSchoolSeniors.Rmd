@@ -1,0 +1,112 @@
+---
+title: "High School Seniors t Test"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+**Week 3 Analysis**
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(DT)
+library(pander)
+library(readr)
+library(car)
+
+HSS <- read_csv("../../Data/HighSchoolSeniors.csv")
+View(HSS)
+
+```
+
+----
+## Background
+
+There is a common belief that boys and girls have different heights, with boys usually being taller. This study uses data from 500 high school seniors in the United States to test this belief. We will focus on comparing the heights of boys and girls. The question we want to answer is:
+
+**Is there a significant difference in height between boys and girls?**
+
+We will use an Independent Samples t-test for this analysis.
+
+### Question
+
+Is there a significant difference in height between boys and girls?
+
+For this study, we will compare the heights of male and female participants based on the data collected.
+
+We will use an Independent Samples t-test with the following hypotheses:
+
+**Null Hypothesis (H₀):** The average height of boys and girls is the same.
+
+$$
+  H_0: \mu_\text{Boys} - \mu_\text{Girls} = 0
+$$
+This means that there is no difference in mean height between boys and girls.
+
+
+**Alternative Hypothesis (H₁):** The average height of boys and girls is different
+
+$$
+  H_a: \mu_\text{Boys} - \mu_\text{Girls} \neq 0
+$$
+This means there is a significant difference in mean height between boys and girls. 
+
+
+
+```{r}
+
+t.test(Height_cm ~ Gender, data = HSS, mu = 0, alternative = "two.sided")
+
+```
+
+### Explanation of Results
+
+Main findings from the t-test:
+
+* Test Statistic **(t = -4.6575):** This tells us how much the height of girls is lower than the height of boys. The result of **-4.6575** means the difference in height is quite large.
+
+* P-value **(4.679e-06)**: The very small p-value (much less than 0.05) means we can confidently reject the idea that boys and girls have the same average height.
+
+* Confidence Interval: The range for the difference in heights is from -32.73 cm to -13.29 cm. This means we are **94%** confident that boys are between **13.29 cm and 32.73 cm** taller than girls.
+
+* Average Heights: The average height for girls is **156.43 cm**, and for boys, it is **179.44 cm**. This shows that, on average, boys are **23 cm** taller than girls.
+
+### QQ Plot
+
+The QQ plot shows that the height data for both boys and girls is close to a normal distribution. The points in the plot are close to the diagonal line, which means the data meets the assumptions needed for the t-test.
+
+```{r}
+HSS_filtered <- HSS[HSS$Height_cm >= 100 & HSS$Height_cm <= 250 & !is.na(HSS$Height_cm) &        !is.na(HSS$Gender), ]
+
+qqPlot(Height_cm ~ Gender, data = HSS_filtered, main = "Q-Q Plot of Height by Gender (100-250 cm)")
+
+```
+
+### Boxplot
+
+The boxplot shows that boys tend to be taller than girls, just like the results from the t-test. The plot clearly displays the difference in height between genders.
+
+```{r}
+ggplot(HSS_filtered, aes(x = Gender, y = Height_cm, fill = Gender)) +
+  geom_boxplot() +
+  labs(title = "Average Height Comparison: Boys vs. Girls",
+       x = "Gender",
+       y = "Height (cm)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+### Conclusion
+
+The results of the t-test strongly suggest that there is a significant difference in height between boys and girls, with boys being taller. We can confidently reject the idea that there is no difference in height. The confidence interval for the height difference shows that boys are, on average, between **13.29 cm and 32.73 cm** taller than girls. The results are consistent across different plots (QQ plot and boxplot), which helps confirm the findings. Future research could look at other factors that might affect height, such as genetics or nutrition, to give a broader understanding of why this difference exists.
+
+
+
+
+
+
+
+
+
+
+

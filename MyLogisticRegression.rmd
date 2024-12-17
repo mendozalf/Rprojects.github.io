@@ -1,0 +1,115 @@
+---
+title: "My Simple Logistic Regression"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+<!-- Find some data of interest to you that can be analyzed with a logistic regression. Complete your Logistic Regression Analysis using this file. 
+
+Hint, run the command 
+
+> data() 
+
+in your Console to see available datasets in R that you could use for this Analysis. You are also welcome to collect data yourself, or find other available datasets online for this Analysis. Just be careful to not use anyone else's "analysis" for this Analysis. Also, no conducting surveys unless you have IRB approval to do so. -->
+
+```{r, include=FALSE}
+library(mosaic)
+library(ResourceSelection)
+library(car)
+library(tidyverse)
+library(mosaic)
+library(DT)
+library(pander)
+library(car)
+library(plotly)
+```
+
+### Background
+
+April 7, 2024:
+On that Sunday morning, I was driving with my family from Rexburg to Salt Lake for General Conference. We left at 5:00 AM, and by 5:30 AM, while crossing a bridge in Idaho Falls, I lost control of the car due to icy conditions on the road. We hit the guardrail, then launched off and rolled down the hill multiple times. It was a terrifying experience, but miraculously, we all survived.
+
+We are still recovering physically from the accident, but we are okay. Emotionally, I’ve struggled with feelings of guilt, questioning why this happened. One thing that’s been weighing on my mind is that we hadn’t replaced our tires, and I suspect their tread depth might have been too low.
+
+I tried to find concrete data on how tire tread depth relates to accidents, but much of what I found was vague. However, I did come across some useful information:
+
+According to the National Highway Traffic Safety Administration (NHTSA), winter weather, including snow, sleet, and ice, contributes to extremely dangerous driving conditions. In 2022 alone, there were 498 fatal crashes and 32,213 injury crashes attributed to snowy or icy conditions. Proper preparation for winter driving, including checking your vehicle, is crucial. The risk of losing control or being unable to stop your vehicle on slick surfaces is significantly higher.(https://www.nhtsa.gov/winter-driving-tips)
+
+The NHTSA also reports that in 2019, 612 fatalities occurred from tire-related crashes. It is recommended that tires be replaced once they reach a tread depth of 4/32” for optimal safety, especially in winter conditions, though the minimum safe tread depth is 2/32”. Proper tire tread can make a critical difference in preventing crashes and protecting you and your family on the road.(https://www.iseecars.com/articles/bald-tire-dangers)
+
+Although the data I found wasn’t specific to our case, it reinforced an important lesson: we must take extra precautions when driving, particularly in winter weather, and ensure our tires are in good condition.
+
+Some pictures from the accident:
+![Accident](C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/Accident1.jpeg)
+![Accident1](C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/Accident2.jpeg)
+
+
+### Data Set
+
+**It is important to note this data set is fake, it was made using AI**
+
+The table provides information on tire tread depth in millimeters, along with accident data, where "1" indicates an accident occurred and "0" indicates no accident. Our goal is to analyze these two variables to determine whether a lower tread depth, particularly in winter conditions, is associated with an increased likelihood of a car accident.
+
+In the United States, tire tread depth is measured in 32nds of an inch. To convert this measurement to millimeters (mm), we use the conversion factor that 1 inch equals 25.4 mm. For example, a tread depth of 10/32” is approximately 7.94 mm, while the minimum recommended tread depth of 2/32” is about 1.59 mm. For optimal safety, especially in winter conditions, it is advised to replace tires when tread depth reaches 4/32” (roughly 3.17 mm). This conversion helps provide a clearer understanding of tread depth in metric units, making it easier to compare tire conditions across different regions that use the metric system (source: https://www.bridgestonetire.com/learn/maintenance/how-to-check-your-tire-tread-penny-test/).
+
+
+![PennyTest](C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/pennytest.jpg)
+![PennyTest](C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/pennytest1.jpg)
+
+
+```{r, include=TRUE}
+tires <- read.csv("C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/tires vs winter.csv", header=TRUE)
+datatable(tires, options = list(pageLength = 10), rownames = FALSE)
+```
+
+### Test Model
+
+$$
+  P(Y_i = 1|\, x_i) = \frac{e^{\beta_0 + \beta_1 x_i}}{1+e^{\beta_0 + \beta_1 x_i}} = \pi_i
+$$
+
+### Test Summary Table
+The negative coefficient for Tread.Depth..mm. (-1.8305) suggests that as the tread depth increases, the likelihood of an accident decreases. This implies that having better tread depth reduces the risk of an accident.
+The p-values for both the intercept and the coefficient (7.994e-08 and 3.373e-08 respectively) of Tread.Depth..mm. are extremely small (less than 0.001), suggesting that the relationship between tread depth and the likelihood of an accident is highly statistically significant.
+In simpler terms: As tire tread depth increases, the likelihood of an accident decreases, and this effect is statistically significant.
+
+```{r, include=TRUE}
+tiresglm <- glm(Accident ~ Tread.Depth..mm., data = tires, family = binomial)
+summary(tiresglm) %>% pander()
+```
+
+
+### Plot
+
+The plot confirms what our test showed. We can see in the y axis the probability of an accident to occurred, "1" indicates an accident occurred and "0" indicates no accident. In the x axis we have the tread depth in mm. We can see that when our tires have a depth of 2 mm an accident occurred. The line shows that as the tread depth improves, the probability of occurrence of an accident decreases.
+
+```{r, include=TRUE}
+plot(Accident ~ Tread.Depth..mm., data = tires)
+curve(exp( 7.1408 + -1.8305*x)/(1+ exp( 7.1408 + -1.8305*x)), add = TRUE)
+```
+
+### Prediction
+
+Here we are trying to predict what would happen when our tires have a tread depth of 1.59 mm or a tread depth of 2/32, which is the minimum recommended.
+The output value of 0.9857 represents the predicted probability of an accident occurring when the tread depth is 1.59 mm.
+This is a high probability (about 98.57%), meaning that according to your logistic regression model, a tire with a tread depth of 1.59 mm has a very high likelihood of being involved in an accident.
+
+```{r, include=TRUE}
+predict(tiresglm, newdata = data.frame(Tread.Depth..mm. = 1.59), type = "response") %>% pander()
+```
+
+### Diagnose the Goodness-of-Fit
+
+This test evaluates how well the logistic regression model fits the data. Since the null hypothesis is that the logistic regression is a good fit for the data, we claim that the logistic regression is appropriate (p-value = 0.09).
+
+```{r, include=TRUE}
+hoslem.test(tiresglm$y, tiresglm$fitted, g=5) %>% pander()
+```
+
+### Conclusion
+
+Although the data used in this study is synthetic, it is based on real-world information about tire tread depth and its impact on safety, particularly in winter conditions. The analysis showed that reduced tire tread depth may increase the likelihood of accidents, which aligns with recommendations from trusted sources like the National Highway Traffic Safety Administration (NHTSA) and Bridgestone. While the logistic regression model provided useful insights, including a reasonable fit as shown by the Hosmer-Lemeshow test and prediction results, it is important to note that the data is not from actual accidents. This study emphasizes the importance of maintaining proper tire tread depth for safety, especially in winter conditions, and suggests that real-world data would help validate these findings further.
+
+

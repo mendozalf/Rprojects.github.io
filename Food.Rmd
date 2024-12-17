@@ -1,0 +1,153 @@
+---
+title: "Food at College"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r, warning=FALSE, message=FALSE}
+# From your file menu (at the top of R-Studio) select:
+# "Session -> Set working directory -> To source file location"
+# Then play this chunk to get the data into R.
+library(mosaic)
+library(car)
+library(DT)
+library(pander)
+library(readr)
+library(dplyr)
+library(tidyr)
+food <- read_csv("../../Data/food.csv") #food.csv is in the Data folder...
+```
+
+
+### Background
+
+During my two years as a full-time college student, I have experienced various employment situations, including being unemployed, fully employed, working part-time, and even balancing a full-time job with a side business. Throughout these experiences, I noticed that my GPA fluctuated depending on my workload and efforts to meet my family's financial needs. This has sparked my interest in exploring how employment status affects the academic performance of full-time college students.
+
+To investigate this, I will conduct a Kruskal-Wallis test on a dataset that includes information on the GPA of college students, their eating habits, cooking routines, demographic details, parental education levels, and, notably, their employment status. The focus of this study will be on analyzing whether students' reported employment status correlates with their GPA outcomes.
+
+Dataset Overview:
+
+The dataset comes from a survey conducted with 125 college students. The survey collected data on various factors, including GPA, eating habits, cooking habits, demographic information, and employment status. For this analysis, we will specifically examine the relationship between employment status and the GPA that students reported, to determine whether employment status significantly impacts academic performance.
+
+Through this study, I aim to better understand how balancing work and academic responsibilities may affect college students' grades and to explore potential strategies for supporting students in similar situations.
+
+## Raw data
+Here is the dataset without any filters where you can see all the 125 surveys and all the questions asked.
+
+
+```{r, warning=FALSE, message=FALSE}
+datatable(food, options=list(lengthMenu = c(2,10,30)), extensions="Responsive")
+```
+
+### Filtered data
+Now we filtered the data to only show GPA and employment status, we also removed 13 rows where students did not respond to the questions, or responded incorrectly. 
+
+```{r, warning=FALSE, message=FALSE}
+
+food2 <- food %>%
+  group_by(employment) %>% 
+  mutate(
+    id = row_number(),
+  employment = case_when(
+    employment == 1 ~ "Full time",
+    employment == 2 ~ "Part time",
+    employment == 3 ~ "Unemployed"),
+  GPA = as.numeric(gsub("^(Personal|Unknown)$", NA, GPA))) %>% 
+ filter(!is.na(employment) & !is.na(GPA))
+
+food2 <- select(food2, c(GPA, employment))
+
+datatable(food2, options=list(lengthMenu = c(3,10,30)), extensions="Responsive")
+
+```
+
+### Employment status
+
+Now we want to show 4 columns for each employment status to be able to compare the GPA between them.
+```{r, warning=FALSE, message=FALSE}
+Full_time <- filter(food2, employment == "Full time")
+Part_time <- filter(food2, employment == "Part time")
+Unemployed <- filter(food2, employment == "Unemployed")
+
+combined <- bind_rows(
+  Full_time %>% mutate(employment = "Full time"),
+  Part_time %>% mutate(employment = "Part time"),
+  Unemployed %>% mutate(employment = "Unemployed")
+) %>% 
+  mutate(id = row_number())
+
+food2_wide <- combined %>%
+  pivot_wider(
+    names_from = employment,
+    values_from = GPA          
+  )
+
+GPA_table <- select(food2_wide, c(`Full time`, `Part time`, Unemployed))
+datatable(GPA_table, options = list(pageLength = 10))
+
+```
+
+We can see in the table above that only 2 students are full time employed, the other 110 students are either part time employed or unemployed.
+
+### Hypothesis and significance level
+
+Before proceeding to do the Kruskal test, we want to show what our hypothesis are:
+
+   $$
+   H_0: The\ distribution\ of\ GPA\ is\ the\ same\ across\ all\ employment\ statuses\ (Full time, Part time, and\ Unemployed)
+   $$
+   $$
+   H_a: At\ least\ one\ of\ the\ employment\ statuses\ (Full time, Part time, or\ Unemployed)\ has\ a\ significantly\ different\ GPA\ distribution\ from\ the\ others.
+   $$
+To test the hypothesis, we set the significance level α at 0.05. The null hypothesis (H₀) states that there is no significant difference in GPA distributions across the employment status groups (Full time, Part time, Unemployed), meaning the medians of GPA are equal. The alternative hypothesis (H₁) suggests that at least one of the groups has a different GPA distribution. If the p-value from the Kruskal-Wallis test is less than 0.05, we reject the null hypothesis, concluding that there is a significant difference in GPA between the groups. If the p-value is greater than or equal to 0.05, we fail to reject the null hypothesis, meaning there is no sufficient evidence to claim that employment status affects GPA.
+
+### Kruskal test
+
+```{r, warning=FALSE, message=FALSE}
+kruskal.test(list(food2_wide$`Full time`, food2_wide$`Part time`, food2_wide$Unemployed))
+```
+Kruskal-Wallis Test Results:
+Test statistic = 1.3575, df = 2, p-value = 0.5073. The p-value is greater than 0.05, so we fail to reject the null hypothesis.
+
+Interpretation:
+The null hypothesis states that there is no significant difference in GPA between the three groups (Full time, Part time, Unemployed). Since the p-value is greater than 0.05, we conclude that there is no significant difference in GPAs across the employment statuses.
+
+### Summary table
+
+```{r}
+favstats(GPA ~ employment, data = food2) %>% 
+  pander(caption = "Students GPA Summaries by Employment Statuses")
+```
+The summary table supports the test, we can see the the median of the three employment statuses is 3.5 and also there is not significance difference in their means. 
+
+### GPA by Employment Status
+
+```{r}
+combined_long <- bind_rows(
+  Full_time %>% mutate(employment = "Full time"),
+  Part_time %>% mutate(employment = "Part time"),
+  Unemployed %>% mutate(employment = "Unemployed")
+)
+
+
+ggplot(combined_long, aes(x = employment, y = GPA, fill = employment)) +
+  geom_boxplot() +
+  labs(title = "GPA by Employment Status", y = "GPA", x = "Employment Status") +
+  theme_minimal()
+```
+The boxplot above shows that the GPA for both Full-time and Part-time employment statuses is around 3.5, while the GPA for the Unemployed group is slightly lower, but the difference is not statistically significant.
+
+### Conclusion
+
+Based on our test, summary table, and boxplot, we conclude that the number of hours spent working—whether full-time, part-time, or not working—does not significantly impact a student's GPA. In other words, employment status does not appear to be a valid explanation for differences in academic performance.
+
+
+
+
+
+
+
+
+

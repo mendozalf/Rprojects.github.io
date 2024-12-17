@@ -1,0 +1,151 @@
+---
+title: "Recalling Words"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r, warning=FALSE, message=FALSE}
+library(mosaic)
+library(car)
+library(pander)
+library(DT) #You may need to run: install.packages("DT") 
+library(dplyr)
+library(tidyr)
+library(broom)
+library(ggplot2)
+```
+
+```{r, eval=FALSE}
+# Play the chunk above and this one to get the data into your Console
+# Note the eval=FALSE statement in this R-chunk will exclude this code
+# from running when you Knit and will only work in the Console.
+View(Friendly)
+?Friendly
+```
+
+
+## Background 
+
+Many teachers and other educators are interested in understanding how to best deliver new content to students. In general, they have two choices of how to do this.
+
+1. The Meshed Approach
+    * Deliver new content while simultaneously reviewing previously understood content.
+
+2. The Before Approach
+    * Deliver new content after fully reviewing previously understood content.
+
+A study was performed to determine whether the *Meshed* or *Before* approaches to delivering content had any positive benefits on memory recall. 
+
+
+### The Experiment Details
+
+Individuals were seated at a computer and shown a list of words. Words appeared on the screen one at a time, for two seconds each, until all words had been shown (40 total). After all words were shown, they were required to perform a few two-digit mathematical additions (like 15 + 25) for 15 seconds to avoid immediate memory recall of the words. They were then asked to write down as many of the 40 words as they could remember. They were given a maximum of 5.3 minutes to recall words.
+
+The process of showing words and recalling words was repeated four times with the same list of words each time (four chances to get it right). The presentation of the first trial was the same for all treatment conditions. However, trials 2, 3, and 4 were slightly different for each treatment condition.
+
+<div style="padding-left:15px;">
+
+The `SFR` group (the control group) stands for Standard Free Recall. In all four trials the same list of 40 words was presented, in a random order each time.
+
+The `Before` group also used the same 40 words during each trial. However, any words that were correctly recalled in a previous trial were presented first, or *before* the words that were not recalled in the last trial. After all the correct words were presented in random order, the non-recalled words were presented in a random order.
+
+The `Meshed` group also used the same 40 words during each trial. However, words that were correctly recalled in a previous trial were alternated with a missed word during the next presentation order. 
+
+</div>
+
+The data records the number of correctly recalled words (out of the 40 possible) from the fourth trial. Results were obtained for 30 students, 10 in each of the three treatment groups: `SFR`, `Before`, and `Meshed`. 
+
+
+### The Data
+
+The results from the study can be found in the `Friendly` data set in R after loading `library(car)`. 
+
+
+```{r}
+datatable(Friendly, options=list(lengthMenu = c(3,10,30)))
+```
+
+
+## Analysis
+
+**Hypotheses for the Study**
+
+We are testing whether there is a statistically significant difference in the median number of words recalled by the two teaching methods ("Before" and "Meshed")
+
+Research Question:
+
+**Is there a significant difference in the recall of words between the "Before" and "Meshed" teaching methods?**
+
+* Null Hypothesis (H₀): There is no difference in the median number of words recalled between the "Before" and "Meshed" teaching methods.
+
+$$
+  H_0: \ Difference \ in \ medians \ = 0
+$$
+
+* Alternative Hypothesis (Hₐ): There is a difference in the median number of words recalled between the "Before" and "Meshed" teaching methods.
+
+$$
+  H_0: \ Difference \ in \ medians \ \neq 0
+$$
+The significance level for this study is set at 0.05.
+
+$$
+a =0.05
+$$
+
+
+### Table
+
+We want to see if there is a difference in the recall of words between the two teaching methods: "Before" and "Meshed." Since the students in each method group are different, we will use an independent Wilcoxon test (also known as the Mann-Whitney U test) to compare the two groups.
+
+```{r, warning=FALSE, message=FALSE}
+
+Friendly <- Friendly %>%
+  group_by(condition) %>%
+  mutate(row = row_number()) %>%
+  ungroup()
+
+wide_data <- Friendly %>%
+  pivot_wider(names_from = condition, values_from = correct) %>% 
+  rename(Student = row)
+
+final_table <- wide_data %>% 
+  mutate(Difference = Meshed - Before, Rank = min_rank(Difference)) %>% 
+  select(Student, Before, Meshed, Difference, Rank)
+
+pander(final_table, caption = "Recall Scores and Rankings")
+  
+```
+
+
+### Dotplot
+
+This graph reinforces the findings from our table, indicating that there is not a significant difference between the two teaching methods. For instance, in the range of 36 to 40 correctly recalled words, both the Before and Meshed methods have 8 students each. This similarity suggests that neither approach leads to a notably better recall performance.
+
+```{r, warning=FALSE, message=FALSE}
+two_Friendly <- filter(Friendly, condition %in% c("Before", "Meshed"))
+
+ggplot(two_Friendly, aes(x = correct, fill = condition)) +
+  geom_bar(position = "dodge", stat = "count", width = 0.7) + 
+  scale_x_continuous(breaks = seq(25, 40, by = 1)) +
+  scale_fill_manual(values = c("Before" = "skyblue", "Meshed" = "lightgray")) +
+  labs(title = "Recall Performance: Before vs. Meshed Method",
+       x = "Number of Correctly Recalled Words",
+       y = "Number of Students") +
+  theme_minimal() +
+  theme(legend.title = element_blank())
+```
+
+
+### Wilcoxon Test and Conclusion
+
+We conducted a Wilcoxon test to compare the recall scores between the two methods. The test produced a p-value of 0.378. Since this p-value is greater than the significance level of 0.05, we fail to reject the null hypothesis. Therefore, we conclude that there is no statistically significant difference in the recall scores between the "Before" and "Meshed" teaching methods.
+
+```{r, warning=FALSE, message=FALSE}
+wilcox_result <- wilcox.test(correct ~ condition, data = two_Friendly)
+
+print(wilcox_result)
+```
+

@@ -1,0 +1,131 @@
+---
+title: "Simple Linear Regression"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r, message=FALSE, warning=FALSE}
+# Load your libraries
+library(car)
+library(tidyverse)
+library(mosaic)
+library(DT)
+library(pander)
+library(car)
+library(plotly)
+
+# Load your data after saving a csv file in your Data folder.
+# You can use either 
+#   someName <- read.csv("../Data/YourDataFileName.csv", header=TRUE)
+# or
+#   library(readr)
+#   someName <- read_csv("../Data/YourDataFileName.csv")
+
+# Don't forget to run "Session -> Set Working Directory -> To Source file location"
+
+happy_marriage <- read.csv("C:/Users/Paula_Gomez/OneDrive - BYU-Idaho/Desktop/Math 325/Happy Marriage.csv", header=TRUE) 
+
+```
+
+
+## Background
+
+ 
+As Elder Robert D. Hales once said, “I think listening to my wife, next to listening to the Holy Ghost, has been the most important influence in my life.” (https://www.churchofjesuschrist.org/prophets-and-apostles/biographies/elder-robert-d-hales?lang=eng)
+
+Like many married men, I always believed I was a great listener. But a couple of months ago, I came to a humbling realization: I’m not as good as I thought. For years, my wife has frequently said, “You never listen to me.” This phrase was always a little painful to hear, but I never really took it seriously—until I did.
+
+Over the past 10 years of marriage, I’ve noticed that when our communication improves, so does our happiness. And one key part of that communication is how well I listen to her. That’s when I decided to take a more scientific approach to the problem: Is there a real relationship between listening skills and happiness in marriage?
+
+I asked AI to create a dataset to help analyze this. The dataset has three columns:
+
+Week Number – The week of the year.
+Listening Score – How well I listened that week, rated from 1 (very poor listening) to 10 (excellent listening).
+Happiness Score – Our overall happiness that week, rated from 1 (very unhappy) to 10 (extremely happy).
+To make it more realistic, I asked my wife to rate my listening skills for the last two weeks. She gave me scores of 6 and 7, and our happiness was rated 7 and 5, respectively. I included these scores in the dataset to make it more accurate and reflective of real life.
+
+### Data set
+
+Here is the data set:
+
+```{r, message=FALSE, warning=FALSE}
+
+datatable(happy_marriage, options = list(pageLength = 10), rownames = FALSE)
+
+```
+
+### Analysis
+The idea of this analysis is to see if there is a correlation between how well a husband listen to his wife and how happy that marriage is. This is the mathematical formula we will solve in this study:
+
+$$
+  \underbrace{Y_i}_\text{Happiness Score} = \overbrace{\beta_0}^\text{y-int} + \overbrace{\beta_1}^\text{slope} \underbrace{X_i}_\text{Listening Score} + \epsilon_i \quad \text{where} \ \epsilon_i \sim N(0, \sigma^2)
+$$
+Y: This is the Happiness Score of a couple.
+X: This is the Listening Score for the same couple (how well the husband listens).
+β0: This is a starting point — it tells us what the Happiness Score would be if the husband’s Listening Score were zero (so, if the husband didn't listen at all).
+β1: This is the change in the Happiness Score for every unit increase in the Listening Score. For example, if 
+𝛽1 is positive, it means that when the husband listens more (higher Listening Score), the Happiness Score goes up (the couple becomes happier).
+ϵ: This represents all the other factors that could influence the Happiness Score, but aren’t part of the Listening Score. These are random things we can't measure, like personality differences or outside stressors.
+
+
+
+**Null hypothesis (H 0)** There is no relationship between the Listening Score and the Happiness Score.
+
+$$
+H_0: \beta_1 = 0 \\ 
+$$
+**Alternative Hypothesis** :There is a relationship between the Listening Score and the Happiness Score.
+
+$$
+\\H_a: \beta_1 \neq 0
+\\
+$$
+The significance level **α=0.05**: This is a threshold that helps us decide whether the relationship between listening and happiness is strong enough to be considered real or if it could just be due to random chance. If we get a result where the probability of observing our data is less than 5% (or 0.05), we can say that it’s very unlikely that the relationship between listening and happiness happened by chance. In that case, we would reject the null hypothesis ( 𝐻 0 H 0 ​ ) and say that there is indeed a relationship.
+
+$$
+a =0.05
+$$
+
+### Plot
+
+This graph shows the relationship between the Listening Score (on the x-axis) and the Happiness Score (on the y-axis) in the marriage. The upward-sloping line indicates that as the Listening Score increases, the Happiness Score also tends to increase. This suggests a positive correlation between better listening and greater marital happiness.
+
+```{r}
+# Create a scatter plot with regression line
+plot(Happiness.Score..Y. ~ Listening.Score..X., data = happy_marriage, 
+     pch = 16, col = "skyblue", 
+     xlab = "Listening Score", 
+     ylab = "Happiness Score", 
+     main = "Impact of Husband's Listening on Marriage Happiness")
+
+# Refit the model with the correct variables
+happiness.lm <- lm(Happiness.Score..Y. ~ Listening.Score..X., data = happy_marriage)
+
+abline(happiness.lm, lwd = 3, col = rgb(0.4, 0.4, 0.4, 0.2))
+
+```
+
+### Test
+
+Each point increase in the Listening Score corresponds to a 1.072-point increase in the Happiness Score, indicating that better listening is associated with higher marital happiness. The p-value of 8.837e-31 is extremely small, which means that the observed relationship is statistically significant and very unlikely to have occurred by chance. Additionally, the model explains 92.8% of the variation in marital happiness, showing that listening plays a significant role in happiness.
+
+```{r}
+happiness.lm <- lm(Listening.Score..X. ~ Happiness.Score..Y., data = happy_marriage)
+pander(summary(happiness.lm))
+```
+
+### Appropriateness of the Regression
+
+The residuals analysis shows some slight negative skewness and lighter-than-expected tails. This indicates that while the model fits the data well, there are a few points that don't quite follow the expected pattern. Additionally, there is some positive autocorrelation in the residuals, which suggests that the errors are not fully independent. However, the strong overall relationship between listening and happiness suggests that the linear model is still a good fit for the data
+
+```{r}
+
+par(mfrow=c(1,3))
+plot(happiness.lm, which=1:2)
+plot(happiness.lm$residuals, main="Residuals vs Order", xlab="",
+     ylab="Residuals")
+```
+
+
